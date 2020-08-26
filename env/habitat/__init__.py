@@ -50,6 +50,7 @@ def construct_envs(args):
         config_env = cfg_env(config_paths=
                              ["env/habitat/habitat_api/configs/" + args.task_config])
         config_env.defrost()
+        config_env.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
 
         if len(scenes) > 0:
             config_env.DATASET.CONTENT_SCENES = scenes[

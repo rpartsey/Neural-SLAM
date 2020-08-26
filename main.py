@@ -119,6 +119,8 @@ def main():
     envs = make_vec_envs(args)
     obs, infos = envs.reset()
 
+    # current_episodes = envs.get_current_episode()
+
     # Initialize map variables
     ### Full map consists of 4 channels containing the following:
     ### 1. Obstacle Map
@@ -517,6 +519,7 @@ def main():
                 global_goals = [[int(action[0] * local_w),
                                  int(action[1] * local_h)]
                                 for action in cpu_actions]
+
 
                 g_reward = 0
                 g_masks = torch.ones(num_scenes).float().to(device)

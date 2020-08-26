@@ -161,6 +161,7 @@ class Exploration_Env(habitat.RLEnv):
         self.last_loc = self.curr_loc
         self.last_sim_location = self.get_sim_location()
 
+        # TODO: check the line below degrees or radians
         # Convert pose to cm and degrees for mapper
         mapper_gt_pose = (self.curr_loc_gt[0]*100.0,
                           self.curr_loc_gt[1]*100.0,
@@ -378,6 +379,23 @@ class Exploration_Env(habitat.RLEnv):
             o = 2*np.pi - quaternion.as_euler_angles(agent_state.rotation)[1]
         if o > np.pi:
             o -= 2 * np.pi
+
+        def get_polar_angle(_sim):
+            from habitat.tasks.utils import cartesian_to_polar, quaternion_rotate_vector
+            agent_state = _sim.get_agent_state()
+            # quaternion is in x, y, z, w format
+            ref_rotation = agent_state.rotation
+
+            heading_vector = quaternion_rotate_vector(
+                ref_rotation.inverse(), np.array([0, 0, -1])
+            )
+
+            phi = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
+            x_y_flip = -np.pi / 2
+            return np.array(phi) + x_y_flip
+
+        polar_angle = get_polar_angle(self._env.sim)
+
         return x, y, o
 
 
@@ -599,6 +617,9 @@ class Exploration_Env(habitat.RLEnv):
         x, y = -x - min_x, -y - min_y
         range_x, range_y = self.map_obj.max/100. - self.map_obj.origin/100.
 
+        # map_with_agent = sim_map.copy()
+        # map_with_agent[int(y * 20)-3:int(y * 20)+3, int(x * 20)-3:int(x * 20)+3] = 0.0
+
         map_size = sim_map.shape
         scale = 2.
         grid_size = int(scale*max(map_size))
@@ -618,6 +639,7 @@ class Exploration_Env(habitat.RLEnv):
                 ]])
 
         else:
+            # TODO: Why this value is calculated?
             st = torch.tensor([[
                     (x - range_x/2.) * 2. / (range_x * scale),
                     (y - range_y/2.) * 2. / (range_y * scale) \
@@ -630,8 +652,18 @@ class Exploration_Env(habitat.RLEnv):
 
         grid_map = torch.from_numpy(grid_map).float()
         grid_map = grid_map.unsqueeze(0).unsqueeze(0)
+
         translated = F.grid_sample(grid_map, trans_mat)
+
+        # translated_map = translated.clone().squeeze().squeeze()
+        # translated_map[translated_map > 0] = 1.
+        # translated_map = translated_map.cpu().numpy()
+
         rotated = F.grid_sample(translated, rot_mat)
+
+        # rotated_map = rotated.clone().squeeze().squeeze()
+        # rotated_map[rotated_map > 0] = 1.
+        # rotated_map = rotated_map.cpu().numpy()
 
         episode_map = torch.zeros((full_map_size, full_map_size)).float()
         if full_map_size > grid_size:

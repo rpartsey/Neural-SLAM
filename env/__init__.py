@@ -53,3 +53,6 @@ class VecPyTorch():
 
     def close(self):
         return self.venv.close()
+
+    # def get_current_episode(self):
+    #     return self.venv.current_episodes()
